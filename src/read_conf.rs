@@ -70,7 +70,7 @@ message = \"Choose type 2\"
                         RoleButton {
                             emoji: String::from("emoki_1"),
                             label: String::from("label_3"),
-                            role_id: RoleId::new(3),
+                            role_id: RoleId::from(3),
                         }
                     ),]),
                 }
