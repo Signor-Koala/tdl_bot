@@ -1,9 +1,15 @@
 use indexmap::IndexMap;
 use serde::Deserialize;
-use serenity::all::RoleId;
+use serenity::all::{ChannelId, RoleId};
 
 #[derive(Deserialize, Debug, PartialEq)]
-pub struct RoleChoices {
+pub struct RoleConfig {
+    pub channel_id: ChannelId,
+    pub choices: Vec<RoleChoice>,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct RoleChoice {
     pub message: String,
     pub options: IndexMap<String, RoleButton>,
 }
@@ -15,9 +21,52 @@ pub struct RoleButton {
     pub role_id: RoleId,
 }
 
-pub fn get_role_choices(config: &str) -> Vec<RoleChoices> {
-    let role_choices_map: IndexMap<String, RoleChoices> = toml::from_str(config).unwrap();
-    role_choices_map.into_values().collect()
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct PurgeTimerConfig {
+    pub channel_id: ChannelId,
+    pub time: toml::value::Datetime,
+}
+
+impl RoleConfig {
+    pub fn from_config(config: &str) -> Self {
+        toml::from_str(config).unwrap()
+    }
+}
+
+impl PurgeTimerConfig {
+    pub fn from_config(config: &str) -> Self {
+        toml::from_str(config).unwrap()
+    }
+}
+
+pub async fn purge(config: &str) {
+    let aux_struct = PurgeTimerConfig::from_config(config);
+    let purge_time = aux_struct.time.time.unwrap();
+
+    let now = chrono::Utc::now();
+    let mut start = now
+        .date_naive()
+        .and_hms_opt(
+            purge_time.hour.into(),
+            purge_time.minute.into(),
+            purge_time.second.into(),
+        )
+        .unwrap()
+        .signed_duration_since(now.naive_utc());
+    let period = chrono::Duration::days(1).to_std().unwrap();
+
+    if start < chrono::Duration::zero() {
+        start = start.checked_add(&chrono::Duration::hours(24)).unwrap();
+    }
+
+    let mut interval = tokio::time::interval_at(
+        tokio::time::Instant::now() + start.to_std().unwrap(),
+        period,
+    );
+
+    loop {
+        interval.tick().await;
+    }
 }
 
 #[cfg(test)]
@@ -27,54 +76,58 @@ mod tests {
     #[test]
     fn role_test() {
         let config = "
-[Type1]
+channel_id = 123
+[[choices]]
 message = \"Choose type 1\"
-[Type1.options]
+[choices.options]
     t1_one = { emoji = \"emoji_1\", label = \"label_1\", role_id = 1 }
     t1_two = { emoji = \"emoji_2\", label = \"label_2\", role_id = 2 }
 
-[Type2]
+[[choices]]
 message = \"Choose type 2\"
-[Type2.options]
+[choices.options]
     t2_one = { emoji = \"emoki_1\", label = \"label_3\", role_id = 3}
 ";
 
         assert_eq!(
-            get_role_choices(config),
-            vec![
-                RoleChoices {
-                    message: String::from("Choose type 1"),
-                    options: IndexMap::from([
-                        (
-                            String::from("t1_one"),
+            RoleConfig::from_config(config),
+            RoleConfig {
+                channel_id: ChannelId::new(123),
+                choices: vec![
+                    RoleChoice {
+                        message: String::from("Choose type 1"),
+                        options: IndexMap::from([
+                            (
+                                String::from("t1_one"),
+                                RoleButton {
+                                    emoji: String::from("emoji_1"),
+                                    label: String::from("label_1"),
+                                    role_id: RoleId::from(1),
+                                }
+                            ),
+                            (
+                                String::from("t1_two"),
+                                RoleButton {
+                                    emoji: String::from("emoji_2"),
+                                    label: String::from("label_2"),
+                                    role_id: RoleId::from(2),
+                                }
+                            )
+                        ]),
+                    },
+                    RoleChoice {
+                        message: String::from("Choose type 2"),
+                        options: IndexMap::from([(
+                            String::from("t2_one"),
                             RoleButton {
-                                emoji: String::from("emoji_1"),
-                                label: String::from("label_1"),
-                                role_id: RoleId::from(1),
+                                emoji: String::from("emoki_1"),
+                                label: String::from("label_3"),
+                                role_id: RoleId::from(3),
                             }
-                        ),
-                        (
-                            String::from("t1_two"),
-                            RoleButton {
-                                emoji: String::from("emoji_2"),
-                                label: String::from("label_2"),
-                                role_id: RoleId::from(2),
-                            }
-                        )
-                    ]),
-                },
-                RoleChoices {
-                    message: String::from("Choose type 2"),
-                    options: IndexMap::from([(
-                        String::from("t2_one"),
-                        RoleButton {
-                            emoji: String::from("emoki_1"),
-                            label: String::from("label_3"),
-                            role_id: RoleId::from(3),
-                        }
-                    ),]),
-                }
-            ]
+                        ),]),
+                    }
+                ]
+            }
         )
     }
 }
