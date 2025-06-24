@@ -27,6 +27,12 @@ pub struct PurgeTimerConfig {
     pub time: toml::value::Datetime,
 }
 
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct ModMailConfig {
+    pub channel_id: ChannelId,
+    pub mod_role: RoleId,
+}
+
 impl RoleConfig {
     pub fn from_config(config: &str) -> Self {
         toml::from_str(config).unwrap()
@@ -39,33 +45,9 @@ impl PurgeTimerConfig {
     }
 }
 
-pub async fn purge(config: &str) {
-    let aux_struct = PurgeTimerConfig::from_config(config);
-    let purge_time = aux_struct.time.time.unwrap();
-
-    let now = chrono::Utc::now();
-    let mut start = now
-        .date_naive()
-        .and_hms_opt(
-            purge_time.hour.into(),
-            purge_time.minute.into(),
-            purge_time.second.into(),
-        )
-        .unwrap()
-        .signed_duration_since(now.naive_utc());
-    let period = chrono::Duration::days(1).to_std().unwrap();
-
-    if start < chrono::Duration::zero() {
-        start = start.checked_add(&chrono::Duration::hours(24)).unwrap();
-    }
-
-    let mut interval = tokio::time::interval_at(
-        tokio::time::Instant::now() + start.to_std().unwrap(),
-        period,
-    );
-
-    loop {
-        interval.tick().await;
+impl ModMailConfig {
+    pub fn from_config(config: &str) -> Self {
+        toml::from_str(config).unwrap()
     }
 }
 
