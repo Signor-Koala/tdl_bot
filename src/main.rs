@@ -4,7 +4,7 @@ mod commands;
 mod handler;
 mod read_conf;
 
-use commands::modmail;
+use commands::{initrolechannel, modmail, modmail_admin, register};
 use dotenv::dotenv;
 use handler::Handler;
 use indexmap::IndexMap;
@@ -50,7 +50,7 @@ async fn main() {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![modmail()],
+            commands: vec![modmail(), initrolechannel(), register(), modmail_admin()],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {

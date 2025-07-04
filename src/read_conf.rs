@@ -4,7 +4,6 @@ use serenity::all::{ChannelId, RoleId};
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct RoleConfig {
-    pub channel_id: ChannelId,
     pub choices: Vec<RoleChoice>,
 }
 
@@ -58,7 +57,6 @@ mod tests {
     #[test]
     fn role_test() {
         let config = "
-channel_id = 123
 [[choices]]
 message = \"Choose type 1\"
 [choices.options]
@@ -74,7 +72,6 @@ message = \"Choose type 2\"
         assert_eq!(
             RoleConfig::from_config(config),
             RoleConfig {
-                channel_id: ChannelId::new(123),
                 choices: vec![
                     RoleChoice {
                         message: String::from("Choose type 1"),

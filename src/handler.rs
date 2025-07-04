@@ -2,35 +2,21 @@ use std::fs;
 
 use ::serenity::{
     all::{
-        ChannelId, CreateActionRow, CreateButton, CreateInteractionResponse,
-        CreateInteractionResponseMessage, CreateMessage, EventHandler, Interaction, ReactionType,
-        Ready,
+        ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
+        EventHandler, Interaction, Ready,
     },
     async_trait,
     futures::StreamExt,
 };
 use poise::serenity_prelude as serenity;
 
-use crate::{ROLE_CONFIG, ROLE_MAP};
+use crate::ROLE_MAP;
 
-use super::read_conf::{PurgeTimerConfig, RoleButton};
-
-fn create_role_button(choice_id: &str, choice_data: &RoleButton) -> CreateButton {
-    CreateButton::new(choice_id)
-        .emoji(
-            choice_data
-                .emoji
-                .parse::<ReactionType>()
-                .unwrap_or_else(|_| {
-                    panic!("{} cannot be converted to an emoji", choice_data.emoji)
-                }),
-        )
-        .label(choice_data.label.clone())
-}
+use super::read_conf::PurgeTimerConfig;
 
 pub struct Handler;
 
-async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId) {
+pub async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId) {
     loop {
         let mut messages = channel_id.messages_iter(&ctx).boxed();
         let mut m_vec = vec![];
@@ -46,35 +32,15 @@ async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId) {
     }
 }
 
-impl Handler {
-    async fn initialise_role_channel(&self, ctx: &serenity::Context, channel_id: &ChannelId) {
-        delete_all_messages(ctx, channel_id).await;
-        for choices in &*ROLE_CONFIG.choices {
-            channel_id
-                .send_message(
-                    ctx,
-                    CreateMessage::new()
-                        .content(choices.message.clone())
-                        .components(vec![CreateActionRow::Buttons(
-                            choices
-                                .options
-                                .iter()
-                                .map(|(i, d)| create_role_button(i, d))
-                                .collect(),
-                        )]),
-                )
-                .await
-                .unwrap();
-        }
-    }
-}
-
 #[async_trait]
 impl EventHandler for Handler {
     async fn interaction_create(&self, ctx: serenity::Context, interaction: Interaction) {
         let interaction = match interaction {
             Interaction::Component(i) => i,
-            _ => unimplemented!(),
+            _ => {
+                eprintln!("Unimplemented interaction: {:?}", interaction);
+                return;
+            }
         };
 
         if &interaction.data.custom_id == "modmail_button" {
@@ -124,9 +90,6 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: serenity::Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
-        self.initialise_role_channel(&ctx, &ROLE_CONFIG.channel_id)
-            .await;
-
         let _ = &*ROLE_MAP;
 
         tokio::spawn(async move {
