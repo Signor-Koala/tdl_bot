@@ -1,0 +1,12 @@
+[package]
+name = "tdl-bot"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+dotenv = "0.15.0"
+indexmap = { version = "2.9.0", features = ["serde"] }
+serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
+serenity = {version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "collector"] }
+tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
+toml = "0.8.22"
