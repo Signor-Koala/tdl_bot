@@ -7,6 +7,7 @@ edition = "2024"
 chrono = "0.4.41"
 dotenv = "0.15.0"
 indexmap = { version = "2.9.0", features = ["serde"] }
+poise = "0.6.1"
 serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
 serenity = {version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "collector", "cache"] }
 tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
