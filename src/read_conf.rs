@@ -1,6 +1,6 @@
 use indexmap::IndexMap;
 use serde::Deserialize;
-use serenity::all::{ChannelId, RoleId};
+use serenity::all::{ChannelId, GuildId, RoleId};
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct RoleConfig {
@@ -30,6 +30,18 @@ pub struct PurgeTimerConfig {
 pub struct ModMailConfig {
     pub channel_id: ChannelId,
     pub mod_role: RoleId,
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+pub struct VerificationConfig {
+    pub guild_id: GuildId,
+    pub verification_role: RoleId,
+}
+
+impl VerificationConfig {
+    pub fn from_config(config: &str) -> Self {
+        toml::from_str(config).unwrap()
+    }
 }
 
 impl RoleConfig {

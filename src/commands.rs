@@ -22,12 +22,16 @@ pub async fn modmail(
                     )),
                 },
                 PermissionOverwrite {
-                    allow: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES,
+                    allow: Permissions::VIEW_CHANNEL
+                        | Permissions::SEND_MESSAGES
+                        | Permissions::READ_MESSAGE_HISTORY,
                     deny: Permissions::CREATE_PUBLIC_THREADS | Permissions::CREATE_PRIVATE_THREADS,
                     kind: serenity::all::PermissionOverwriteType::Role(MOD_MAIL_CONFIG.mod_role),
                 },
                 PermissionOverwrite {
-                    allow: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES,
+                    allow: Permissions::VIEW_CHANNEL
+                        | Permissions::SEND_MESSAGES
+                        | Permissions::READ_MESSAGE_HISTORY,
                     deny: Permissions::CREATE_PUBLIC_THREADS | Permissions::CREATE_PRIVATE_THREADS,
                     kind: serenity::all::PermissionOverwriteType::Member(ctx.author().id),
                 },

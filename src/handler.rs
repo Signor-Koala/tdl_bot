@@ -3,14 +3,14 @@ use std::fs;
 use ::serenity::{
     all::{
         ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-        EventHandler, Interaction, Ready,
+        EventHandler, GuildId, Interaction, Ready, RoleId,
     },
     async_trait,
     futures::StreamExt,
 };
 use poise::serenity_prelude as serenity;
 
-use crate::ROLE_MAP;
+use crate::{ROLE_MAP, read_conf::VerificationConfig};
 
 use super::read_conf::PurgeTimerConfig;
 
@@ -38,7 +38,7 @@ impl EventHandler for Handler {
         let interaction = match interaction {
             Interaction::Component(i) => i,
             _ => {
-                eprintln!("Unimplemented interaction: {:?}", interaction);
+                eprintln!("Unimplemented interaction: {interaction:?}");
                 return;
             }
         };
@@ -91,6 +91,51 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: serenity::Context, ready: Ready) {
         println!("{} is connected!", ready.user.name);
         let _ = &*ROLE_MAP;
+        let ctx2 = ctx.clone();
+
+        tokio::spawn(async move {
+            let config = VerificationConfig::from_config("verfication.toml");
+            let verified_role_id = config.verification_role;
+            let guild_id = config.guild_id;
+            let verification_period: i64 =
+                chrono::Duration::days(3).to_std().unwrap().as_secs() as i64;
+
+            let now = chrono::Utc::now();
+            let mut start = now
+                .date_naive()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+                .signed_duration_since(now.naive_utc());
+            let period = chrono::Duration::hours(24).to_std().unwrap();
+
+            if start < chrono::Duration::zero() {
+                start = start.checked_add(&chrono::Duration::hours(24)).unwrap();
+            }
+
+            let mut interval = tokio::time::interval_at(
+                tokio::time::Instant::now() + start.to_std().unwrap(),
+                period,
+            );
+
+            loop {
+                let now_timestamp = chrono::Utc::now().timestamp();
+                let all_members = guild_id.members(&ctx2, None, None).await.unwrap();
+                let unverified_members = all_members
+                    .iter()
+                    .filter(|m| !m.roles.contains(&verified_role_id));
+                for m in unverified_members {
+                    let join_time = m.joined_at;
+                    if let Some(joined) = join_time
+                        && now_timestamp - joined.timestamp() > verification_period
+                    {
+                        println!("{} has been verified", m.display_name());
+                        m.add_roles(&ctx2, &[verified_role_id]).await.unwrap();
+                    }
+                }
+
+                interval.tick().await;
+            }
+        });
 
         tokio::spawn(async move {
             let config = fs::read_to_string("purge.toml").unwrap();
