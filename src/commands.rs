@@ -47,10 +47,7 @@ pub async fn modmail(
             let a = ctx.guild_id().unwrap().create_channel(&ctx, chan).await?;
 
             let m = CreateMessage::new()
-                .content(format!(
-                    "# Title: {} \n Click here to delete the channel",
-                    t
-                ))
+                .content(format!("# Title: {t} \n Click here to delete the channel",))
                 .button(CreateButton::new("modmail_button").label("Close Mod-Mail"));
 
             a.id.send_message(ctx, m).await?;
@@ -88,17 +85,21 @@ pub async fn modmail_admin(
                     )),
                 },
                 PermissionOverwrite {
-                    allow: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES,
+                    allow: Permissions::VIEW_CHANNEL
+                        | Permissions::SEND_MESSAGES
+                        | Permissions::READ_MESSAGE_HISTORY,
                     deny: Permissions::CREATE_PUBLIC_THREADS | Permissions::CREATE_PRIVATE_THREADS,
                     kind: serenity::all::PermissionOverwriteType::Role(MOD_MAIL_CONFIG.mod_role),
                 },
                 PermissionOverwrite {
-                    allow: Permissions::VIEW_CHANNEL | Permissions::SEND_MESSAGES,
+                    allow: Permissions::VIEW_CHANNEL
+                        | Permissions::SEND_MESSAGES
+                        | Permissions::READ_MESSAGE_HISTORY,
                     deny: Permissions::CREATE_PUBLIC_THREADS | Permissions::CREATE_PRIVATE_THREADS,
                     kind: serenity::all::PermissionOverwriteType::Member(suspect),
                 },
             ];
-            let chan = CreateChannel::new(format!("{}-{}", t, suspect))
+            let chan = CreateChannel::new(format!("{t}-{suspect}"))
                 .kind(serenity::all::ChannelType::Text)
                 .category(MOD_MAIL_CONFIG.channel_id)
                 .permissions(user_perm);
