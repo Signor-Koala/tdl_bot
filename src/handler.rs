@@ -94,7 +94,8 @@ impl EventHandler for Handler {
         let ctx2 = ctx.clone();
 
         tokio::spawn(async move {
-            let config = VerificationConfig::from_config("verfication.toml");
+            let config_file = fs::read_to_string("verification.toml").unwrap();
+            let config = VerificationConfig::from_config(config_file.as_str());
             let verified_role_id = config.verification_role;
             let guild_id = config.guild_id;
             let verification_period: i64 =
