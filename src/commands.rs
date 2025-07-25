@@ -131,19 +131,32 @@ pub async fn initrolechannel(ctx: Context<'_>) -> Result<(), Error> {
                 ctx,
                 CreateMessage::new()
                     .content(choices.message.clone())
-                    .components(vec![CreateActionRow::Buttons(
+                    .components(
                         choices
                             .options
                             .iter()
-                            .map(|(i, d)| {
-                                CreateButton::new(i)
-                                    .emoji(d.emoji.parse::<ReactionType>().unwrap_or_else(|_| {
-                                        panic!("{} cannot be converted to an emoji", d.emoji)
-                                    }))
-                                    .label(d.label.clone())
+                            .collect::<Vec<_>>()
+                            .chunks(5)
+                            .map(|c| {
+                                CreateActionRow::Buttons(
+                                    c.iter()
+                                        .map(|(i, d)| {
+                                            CreateButton::new(i.to_string())
+                                        .emoji(d.emoji.parse::<ReactionType>().unwrap_or_else(
+                                            |_| {
+                                                panic!(
+                                                    "{} cannot be converted to an emoji",
+                                                    d.emoji
+                                                )
+                                            },
+                                        ))
+                                        .label(d.label.clone())
+                                        })
+                                        .collect(),
+                                )
                             })
                             .collect(),
-                    )]),
+                    ),
             )
             .await?;
     }
