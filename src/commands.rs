@@ -1,12 +1,15 @@
 use serenity::{
     all::{
-        CreateActionRow, CreateButton, CreateChannel, CreateMessage, GuildId, PermissionOverwrite,
-        Permissions, ReactionType, User,
+        CreateActionRow, CreateButton, CreateChannel, CreateMessage, GuildChannel, GuildId,
+        PermissionOverwrite, Permissions, ReactionType, User,
     },
     async_trait,
 };
-use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use songbird::{TrackEvent, input::YoutubeDl};
+use songbird::{
+    events::{Event, EventContext, EventHandler as VoiceEventHandler},
+    id::ChannelId,
+};
 
 use crate::{Context, Error, HttpKey, MOD_MAIL_CONFIG, ROLE_CONFIG, handler::delete_all_messages};
 
@@ -29,33 +32,23 @@ impl VoiceEventHandler for TrackErrorNotifier {
 }
 
 #[poise::command(slash_command)]
-pub async fn join_vc(ctx: Context<'_>) -> Result<(), Error> {
+pub async fn join_vc(
+    ctx: Context<'_>,
+    #[description = "Channel to join"] chan: GuildChannel,
+) -> Result<(), Error> {
     ctx.defer().await?;
-    let guild = ctx.cache().guild(ctx.guild_id().unwrap()).unwrap().clone();
-    let voice_states = guild.voice_states.get(&ctx.author().id);
-    if let Some(v) = voice_states {
-        match v.channel_id {
-            Some(c) => {
-                let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
-                if let Ok(handler_lock) = manager.join(ctx.guild_id().unwrap(), c).await {
-                    let mut handler = handler_lock.lock().await;
-                    handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-                    if !handler.is_deaf() {
-                        handler.deafen(true).await?;
-                    }
-                    if !handler.is_mute() {
-                        handler.mute(false).await?;
-                    }
-                }
-                ctx.reply("Successfully joined VC!").await
-            }
-            None => {
-                ctx.reply("You must be in a voice channel for me to join! Join the desired voice channel and try again").await
-            }
+    let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
+    if let Ok(handler_lock) = manager.join(ctx.guild_id().unwrap(), chan.id).await {
+        let mut handler = handler_lock.lock().await;
+        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+        if !handler.is_deaf() {
+            handler.deafen(true).await?;
         }
-    } else {
-        ctx.reply("Error getting voice state of User").await
-    }?;
+        if !handler.is_mute() {
+            handler.mute(false).await?;
+        }
+    }
+    ctx.reply("Successfully joined VC!").await?;
     Ok(())
 }
 
