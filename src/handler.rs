@@ -3,7 +3,7 @@ use std::fs;
 use ::serenity::{
     all::{
         ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-        EventHandler, GuildId, Interaction, Ready, RoleId,
+        EventHandler, Interaction, Ready,
     },
     async_trait,
     futures::StreamExt,

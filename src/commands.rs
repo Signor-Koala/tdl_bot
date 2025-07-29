@@ -1,11 +1,108 @@
-use serenity::all::{
-    CreateActionRow, CreateButton, CreateChannel, CreateMessage, GuildId, PermissionOverwrite,
-    Permissions, ReactionType, User,
+use serenity::{
+    all::{
+        CreateActionRow, CreateButton, CreateChannel, CreateMessage, GuildId, PermissionOverwrite,
+        Permissions, ReactionType, User,
+    },
+    async_trait,
 };
+use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
+use songbird::{TrackEvent, input::YoutubeDl};
 
-use crate::{Context, Error, MOD_MAIL_CONFIG, ROLE_CONFIG, handler::delete_all_messages};
+use crate::{Context, Error, HttpKey, MOD_MAIL_CONFIG, ROLE_CONFIG, handler::delete_all_messages};
 
-#[poise::command(prefix_command, slash_command)]
+struct TrackErrorNotifier;
+
+#[async_trait]
+impl VoiceEventHandler for TrackErrorNotifier {
+    async fn act(&self, ctx: &EventContext<'_>) -> Option<Event> {
+        if let EventContext::Track(track_list) = ctx {
+            for (state, handle) in *track_list {
+                println!(
+                    "Track {:?} encountered an error: {:?}",
+                    handle.uuid(),
+                    state.playing
+                );
+            }
+        }
+        None
+    }
+}
+
+#[poise::command(slash_command)]
+pub async fn join_vc(ctx: Context<'_>) -> Result<(), Error> {
+    ctx.defer().await?;
+    let guild = ctx.guild().unwrap().clone();
+    let voice_states = guild.voice_states.get(&ctx.author().id);
+    if let Some(v) = voice_states {
+        match v.channel_id {
+            Some(c) => {
+                let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
+                if let Ok(handler_lock) = manager.join(ctx.guild_id().unwrap(), c).await {
+                    let mut handler = handler_lock.lock().await;
+                    handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+                    if !handler.is_deaf() {
+                        handler.deafen(true).await?;
+                    }
+                    if !handler.is_mute() {
+                        handler.mute(false).await?;
+                    }
+                }
+                ctx.reply("Successfully joined VC!").await
+            }
+            None => {
+                ctx.reply("You must be in a voice channel for me to join! Join the desired voice channel and try again").await
+            }
+        }
+    } else {
+        ctx.reply("Error getting voice state of User").await
+    }?;
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+pub async fn leave_vc(ctx: Context<'_>) -> Result<(), Error> {
+    let guild_id = ctx.guild_id().unwrap();
+    let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
+    if manager.get(guild_id).is_some() {
+        if let Err(e) = manager.remove(guild_id).await {
+            ctx.reply(format!("Failed: {e:?}")).await
+        } else {
+            ctx.reply("Left VC").await
+        }
+    } else {
+        ctx.reply("Not in VC").await
+    }?;
+    Ok(())
+}
+
+#[poise::command(slash_command)]
+pub async fn play_yt(
+    ctx: Context<'_>,
+    #[description = "Youtube URL"] url: String,
+) -> Result<(), Error> {
+    ctx.defer().await?;
+    let guild_id = ctx.guild_id().unwrap();
+    let http_client = {
+        let data = ctx.serenity_context().data.read().await;
+        data.get::<HttpKey>()
+            .cloned()
+            .expect("Guarenteed to exist in the typemap")
+    };
+    let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
+
+    if let Some(handler_lock) = manager.get(guild_id) {
+        let mut handler = handler_lock.lock().await;
+        let src = YoutubeDl::new(http_client, url);
+        let _ = handler.play_input(src.clone().into());
+        ctx.reply("Playing song").await
+    } else {
+        ctx.reply("Not in a VC").await
+    }?;
+
+    Ok(())
+}
+
+#[poise::command(slash_command)]
 pub async fn modmail(
     ctx: Context<'_>,
     #[description = "Title"] message: Option<String>,

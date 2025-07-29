@@ -10,10 +10,21 @@ use handler::Handler;
 use indexmap::IndexMap;
 use poise::serenity_prelude as serenity;
 use read_conf::{ModMailConfig, RoleConfig};
+use reqwest::Client as HttpClient;
 
+use ::serenity::prelude::TypeMapKey;
 use serenity::model::prelude::*;
+use songbird::SerenityInit;
+
+use crate::commands::{join_vc, leave_vc, play_yt};
 
 pub struct Data {}
+
+struct HttpKey;
+
+impl TypeMapKey for HttpKey {
+    type Value = HttpClient;
+}
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -50,7 +61,15 @@ async fn main() {
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
-            commands: vec![modmail(), initrolechannel(), register(), modmail_admin()],
+            commands: vec![
+                modmail(),
+                initrolechannel(),
+                register(),
+                modmail_admin(),
+                join_vc(),
+                leave_vc(),
+                play_yt(),
+            ],
             ..Default::default()
         })
         .setup(|ctx, _ready, framework| {
@@ -64,6 +83,8 @@ async fn main() {
     let mut client = serenity::Client::builder(&token, intents)
         .event_handler(Handler)
         .framework(framework)
+        .register_songbird()
+        .type_map_insert::<HttpKey>(HttpClient::new())
         .await
         .expect("Err creating client");
 
