@@ -31,7 +31,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
 #[poise::command(slash_command)]
 pub async fn join_vc(ctx: Context<'_>) -> Result<(), Error> {
     ctx.defer().await?;
-    let guild = ctx.guild().unwrap().clone();
+    let guild = ctx.cache().guild(ctx.guild_id().unwrap()).unwrap().clone();
     let voice_states = guild.voice_states.get(&ctx.author().id);
     if let Some(v) = voice_states {
         match v.channel_id {
@@ -61,7 +61,7 @@ pub async fn join_vc(ctx: Context<'_>) -> Result<(), Error> {
 
 #[poise::command(slash_command)]
 pub async fn leave_vc(ctx: Context<'_>) -> Result<(), Error> {
-    let guild_id = ctx.guild_id().unwrap().clone();
+    let guild_id = ctx.guild_id().unwrap();
     let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
     if manager.get(guild_id).is_some() {
         if let Err(e) = manager.remove(guild_id).await {
