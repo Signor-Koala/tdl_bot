@@ -31,7 +31,7 @@ impl VoiceEventHandler for TrackErrorNotifier {
 #[poise::command(slash_command)]
 pub async fn join_vc(ctx: Context<'_>) -> Result<(), Error> {
     ctx.defer().await?;
-    let guild_id = ctx.guild().unwrap().clone();
+    let guild = ctx.guild().unwrap().clone();
     let voice_states = guild.voice_states.get(&ctx.author().id);
     if let Some(v) = voice_states {
         match v.channel_id {
