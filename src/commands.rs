@@ -5,11 +5,8 @@ use serenity::{
     },
     async_trait,
 };
+use songbird::events::{Event, EventContext, EventHandler as VoiceEventHandler};
 use songbird::{TrackEvent, input::YoutubeDl};
-use songbird::{
-    events::{Event, EventContext, EventHandler as VoiceEventHandler},
-    id::ChannelId,
-};
 
 use crate::{Context, Error, HttpKey, MOD_MAIL_CONFIG, ROLE_CONFIG, handler::delete_all_messages};
 
@@ -37,16 +34,24 @@ pub async fn join_vc(
     #[description = "Channel to join"] chan: GuildChannel,
 ) -> Result<(), Error> {
     ctx.defer().await?;
+
     let manager = songbird::get(ctx.serenity_context()).await.unwrap().clone();
-    if let Ok(handler_lock) = manager.join(ctx.guild_id().unwrap(), chan.id).await {
-        let mut handler = handler_lock.lock().await;
-        handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
-        if !handler.is_deaf() {
-            handler.deafen(true).await?;
-        }
-        if !handler.is_mute() {
-            handler.mute(false).await?;
-        }
+    let handler_lock = manager.join(ctx.guild_id().unwrap(), chan.id).await?;
+    let mut handler = handler_lock.lock().await;
+    handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
+
+    if !handler.is_deaf() {
+        println!("Deafend");
+        handler.deafen(true).await.unwrap();
+    } else {
+        println!(" not Deafend");
+    }
+
+    if handler.is_mute() {
+        println!("unmuted");
+        handler.mute(false).await.unwrap();
+    } else {
+        println!("jfadl");
     }
     ctx.reply("Successfully joined VC!").await?;
     Ok(())
@@ -85,7 +90,9 @@ pub async fn play_yt(
 
     if let Some(handler_lock) = manager.get(guild_id) {
         let mut handler = handler_lock.lock().await;
+
         let src = YoutubeDl::new(http_client, url);
+
         let _ = handler.play_input(src.clone().into());
         ctx.reply("Playing song").await
     } else {

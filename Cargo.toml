@@ -12,5 +12,6 @@ reqwest = "0.12.22"
 serde = { version = "1.0.219", features = ["derive", "serde_derive"] }
 serenity = {version = "0.12", default-features = false, features = ["client", "gateway", "rustls_backend", "model", "collector", "cache"] }
 songbird = "0.5.0"
+symphonia = { version = "0.5.4", features = ["aac", "mp3", "isomp4", "alac"] }
 tokio = { version = "1.21.2", features = ["macros", "rt-multi-thread"] }
 toml = "0.9.3"

@@ -1,5 +1,6 @@
 /target
 .env
+.env.local
 roles.toml
 modmail.toml
 purge.toml
