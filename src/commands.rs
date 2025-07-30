@@ -41,17 +41,11 @@ pub async fn join_vc(
     handler.add_global_event(TrackEvent::Error.into(), TrackErrorNotifier);
 
     if !handler.is_deaf() {
-        println!("Deafend");
         handler.deafen(true).await.unwrap();
-    } else {
-        println!(" not Deafend");
     }
 
     if handler.is_mute() {
-        println!("unmuted");
         handler.mute(false).await.unwrap();
-    } else {
-        println!("jfadl");
     }
     ctx.reply("Successfully joined VC!").await?;
     Ok(())
