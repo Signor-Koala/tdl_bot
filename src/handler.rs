@@ -174,15 +174,16 @@ impl EventHandler for Handler {
                     .unwrap()
                     .timestamp();
 
-                config
-                    .channel_id
-                    .send_message(
-                        &ctx,
-                        CreateMessage::new()
-                            .content(format!("Channel will be purged in <t:{next_purge}:R>")),
-                    )
-                    .await
-                    .unwrap();
+                // config
+                //     .channel_id
+                //     .send_message(
+                //         &ctx,
+                //         CreateMessage::new()
+                //             .content(format!("Channel will be purged in <t:{next_purge}:R>")),
+                //     )
+                //     .await
+                //     .unwrap();
+                //
             }
         });
 
