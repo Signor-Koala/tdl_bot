@@ -3,7 +3,7 @@ use std::fs;
 use ::serenity::{
     all::{
         ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-        EventHandler, Interaction, Ready,
+        EditMessage, EventHandler, Interaction, Ready,
     },
     async_trait,
     futures::StreamExt,
@@ -22,6 +22,24 @@ pub async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId
         let mut m_vec = vec![];
         while let Some(m_res) = messages.next().await {
             if let Ok(m) = m_res {
+                m_vec.push(m);
+            }
+        }
+        if m_vec.is_empty() {
+            break;
+        }
+        channel_id.delete_messages(&ctx, m_vec).await.unwrap();
+    }
+}
+
+pub async fn delete_all_messages_except_mine(ctx: &serenity::Context, channel_id: &ChannelId) {
+    loop {
+        let mut messages = channel_id.messages_iter(&ctx).boxed();
+        let mut m_vec = vec![];
+        while let Some(m_res) = messages.next().await {
+            if let Ok(m) = m_res
+                && !m.is_own(ctx)
+            {
                 m_vec.push(m);
             }
         }
@@ -167,23 +185,28 @@ impl EventHandler for Handler {
             loop {
                 interval.tick().await;
 
-                delete_all_messages(&ctx, &config.channel_id).await;
+                delete_all_messages_except_mine(&ctx, &config.channel_id).await;
 
                 let next_purge = chrono::Utc::now()
                     .checked_add_days(chrono::Days::new(1))
                     .unwrap()
                     .timestamp();
 
-                // config
-                //     .channel_id
-                //     .send_message(
-                //         &ctx,
-                //         CreateMessage::new()
-                //             .content(format!("Channel will be purged in <t:{next_purge}:R>")),
-                //     )
-                //     .await
-                //     .unwrap();
-                //
+                config
+                    .channel_id
+                    .messages_iter(&ctx)
+                    .boxed()
+                    .next()
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .edit(
+                        &ctx,
+                        EditMessage::new()
+                            .content(format!("Channel will be purged in <t:{next_purge}:R>")),
+                    )
+                    .await
+                    .unwrap();
             }
         });
 
