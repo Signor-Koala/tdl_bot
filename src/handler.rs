@@ -2,17 +2,24 @@ use std::fs;
 
 use ::serenity::{
     all::{
-        ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
-        EditMessage, EventHandler, Interaction, Ready,
+        ChannelId, CreateInteractionResponse, CreateInteractionResponseMessage, EditMessage,
+        EventHandler, Interaction, Reaction, ReactionType, Ready,
     },
     async_trait,
     futures::StreamExt,
 };
 use poise::serenity_prelude as serenity;
+use serde::Deserialize;
 
 use crate::{ROLE_MAP, read_conf::VerificationConfig};
 
 use super::read_conf::PurgeTimerConfig;
+
+#[allow(non_snake_case)]
+#[derive(Deserialize)]
+struct Translation {
+    translatedText: String,
+}
 
 pub struct Handler;
 
@@ -30,6 +37,27 @@ pub async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId
         }
         channel_id.delete_messages(&ctx, m_vec).await.unwrap();
     }
+}
+
+async fn translate(message: String, target_codepoints: Vec<char>) -> Option<String> {
+    let url = "https://127.0.0.1/translate";
+    let target_lang = match (target_codepoints[0], target_codepoints[1]) {
+        ('\u{1f1f8}', '\u{1f1ea}') => "sv", // SE Swedish
+        ('\u{1f1ec}', '\u{1f1e7}') => "en", // GB English
+        ('\u{1f1eb}', '\u{1f1f7}') => "fr", // FR French
+        _ => return None,
+    };
+    let client = reqwest::Client::new();
+    let res = client
+        .post(url)
+        .json(&serde_json::json!({
+            "q": message,
+            "source": "auto",
+            "target": target_lang,
+        }))
+        .send()
+        .await;
+    Some(res.ok()?.json::<Translation>().await.ok()?.translatedText)
 }
 
 pub async fn delete_all_messages_except_mine(ctx: &serenity::Context, channel_id: &ChannelId) {
@@ -52,6 +80,19 @@ pub async fn delete_all_messages_except_mine(ctx: &serenity::Context, channel_id
 
 #[async_trait]
 impl EventHandler for Handler {
+    async fn reaction_add(&self, ctx: serenity::Context, add_reaction: Reaction) {
+        if let ReactionType::Unicode(code) = &add_reaction.emoji {
+            let bytes: Vec<char> = code.chars().collect();
+            if bytes[0] <= '\u{1f1ff}' && bytes[0] >= '\u{1f1e6}' {
+                let m = add_reaction.message(&ctx).await.unwrap();
+                let reply = translate(m.content.clone(), bytes)
+                    .await
+                    .unwrap_or_else(|| "Unable to translate text".to_string());
+                m.reply(ctx, reply).await.unwrap();
+            }
+        }
+    }
+
     async fn interaction_create(&self, ctx: serenity::Context, interaction: Interaction) {
         let interaction = match interaction {
             Interaction::Component(i) => i,
