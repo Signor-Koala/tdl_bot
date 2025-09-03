@@ -45,7 +45,7 @@ async fn translate(message: String, target_codepoints: Vec<char>) -> Option<Stri
         ('\u{1f1f8}', '\u{1f1ea}') => "sv", // SE Swedish
         ('\u{1f1ec}', '\u{1f1e7}') => "en", // GB English
         ('\u{1f1eb}', '\u{1f1f7}') => "fr", // FR French
-        ('\u{1f1f0}', '\u{1f1f7}') => "kr", // KR Korean
+        ('\u{1f1f0}', '\u{1f1f7}') => "ko", // KR Korean
         _ => return None,
     };
     let client = reqwest::Client::new();
