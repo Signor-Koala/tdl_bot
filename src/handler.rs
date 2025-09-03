@@ -1,4 +1,4 @@
-use std::fs;
+use std::{env, fs};
 
 use ::serenity::{
     all::{
@@ -40,11 +40,12 @@ pub async fn delete_all_messages(ctx: &serenity::Context, channel_id: &ChannelId
 }
 
 async fn translate(message: String, target_codepoints: Vec<char>) -> Option<String> {
-    let url = "https://127.0.0.1/translate";
+    let url = env::var("TRANSLATE_URL").expect("Expected a translation url in the environment");
     let target_lang = match (target_codepoints[0], target_codepoints[1]) {
         ('\u{1f1f8}', '\u{1f1ea}') => "sv", // SE Swedish
         ('\u{1f1ec}', '\u{1f1e7}') => "en", // GB English
         ('\u{1f1eb}', '\u{1f1f7}') => "fr", // FR French
+        ('\u{1f1f0}', '\u{1f1f7}') => "kr", // KR Korean
         _ => return None,
     };
     let client = reqwest::Client::new();

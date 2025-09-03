@@ -58,7 +58,8 @@ async fn main() {
         | GatewayIntents::DIRECT_MESSAGES
         | GatewayIntents::MESSAGE_CONTENT
         | GatewayIntents::GUILD_MEMBERS
-        | GatewayIntents::GUILD_VOICE_STATES;
+        | GatewayIntents::GUILD_VOICE_STATES
+        | GatewayIntents::GUILD_MESSAGE_REACTIONS;
 
     let framework = poise::Framework::builder()
         .options(poise::FrameworkOptions {
